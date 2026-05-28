@@ -1,0 +1,2 @@
+# MaicoWS300_HomeAssistant_Steuerung
+MaicoWS300_HomeAssistant_Steuerung
