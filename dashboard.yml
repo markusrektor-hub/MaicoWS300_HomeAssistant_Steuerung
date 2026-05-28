@@ -1,0 +1,378 @@
+title: Maico KWL
+cards: []
+badges: []
+type: sections
+max_columns: 7
+icon: mdi:air-conditioner
+sections:
+  - type: grid
+    cards:
+      - type: picture-elements
+        elements:
+          - type: state-label
+            entity: sensor.maico_temperatur_fortluft
+            style:
+              top: 6%
+              left: 44%
+              font-size: 13px
+              color: white
+          - type: state-label
+            entity: sensor.maico_temperatur_lufteintritt
+            style:
+              top: 6%
+              left: 57%
+              font-size: 13px
+              color: white
+          - type: state-label
+            entity: sensor.maico_temperatur_abluft
+            style:
+              top: 45%
+              left: 12%
+              font-size: 13px
+              color: white
+          - type: state-label
+            entity: sensor.maico_temperatur_zuluft
+            style:
+              top: 45%
+              left: 88%
+              font-size: 13px
+              color: white
+          - type: state-label
+            entity: sensor.maico_aktueller_volumenstrom_zul
+            style:
+              top: 53%
+              left: 67%
+              font-size: 12px
+              color: green
+          - type: state-label
+            entity: sensor.maico_aktueller_volumenstrom_abl
+            style:
+              top: 53%
+              left: 33%
+              font-size: 12px
+              color: orange
+          - type: state-label
+            entity: sensor.maico_restlaufzeit_geratefilter
+            style:
+              top: 61%
+              left: 15%
+              font-size: 9px
+              color: grey
+              transform: none
+        image: /local/kwl_v3.png
+        grid_options:
+          columns: 15
+          rows: auto
+        dark_mode_image: /local/kwl_v3.png
+      - type: heading
+        heading: Aktueller Status
+        heading_style: title
+      - show_name: true
+        show_icon: true
+        type: button
+        show_state: true
+        icon: mdi:air-filter
+        name: Drehzahl Zuluftventilator
+        icon_height: 50px
+        entity: sensor.maico_aktuelle_drehzahl_ventilator_zul
+      - show_name: true
+        show_icon: true
+        type: button
+        show_state: true
+        icon: mdi:air-filter
+        name: Drehzahl Abluftventilator
+        icon_height: 50px
+        entity: sensor.maico_aktuelle_drehzahl_ventilator_abl
+      - show_name: true
+        show_icon: true
+        type: button
+        show_state: true
+        icon: mdi:fan
+        icon_height: 50px
+        name: Lüftungseinstellung
+        entity: sensor.kwl_betriebmodus
+      - show_name: true
+        show_icon: true
+        type: button
+        show_state: true
+        icon: mdi:axis-x-arrow-lock
+        name: Bypassklappe
+        icon_height: 50px
+        entity: sensor.kwl_bypass
+      - show_name: true
+        show_icon: true
+        show_state: true
+        type: button
+        entity: sensor.maico_t_raum_bus
+        name: Soll (Bus)
+        icon: mdi:thermometer-check
+        icon_height: 40px
+    column_span: 2
+  - type: grid
+    cards:
+      - type: grid
+        title: Steuerung
+        columns: 5
+        square: false
+        cards:
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-off
+            name: Aus
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 550
+                unit: 1
+                value:
+                  - 0
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-remove
+            name: Manuell
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 550
+                unit: 1
+                value:
+                  - 1
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-auto
+            name: Auto-Zeit
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 550
+                unit: 1
+                value:
+                  - 2
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-plus
+            name: Eco-Zuluft
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 550
+                unit: 1
+                value:
+                  - 4
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-minus
+            name: Eco-Abluft
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 550
+                unit: 1
+                value:
+                  - 5
+                hub: Maico KWL
+      - type: heading
+        heading: " "
+        heading_style: title
+      - type: grid
+        title: Lüftungs-Drehzahl
+        columns: 4
+        square: false
+        cards:
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-off
+            name: Aus
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 554
+                unit: 1
+                value:
+                  - 0
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-speed-1
+            name: Reduziert
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 554
+                unit: 1
+                value:
+                  - 2
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-speed-2
+            name: Nenn
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 554
+                unit: 1
+                value:
+                  - 3
+                hub: Maico KWL
+          - show_name: true
+            show_icon: true
+            type: button
+            show_state: false
+            icon: mdi:fan-speed-3
+            name: Intensiv
+            tap_action:
+              action: perform-action
+              perform_action: modbus.write_register
+              data:
+                address: 554
+                unit: 1
+                value:
+                  - 4
+                hub: Maico KWL
+      - type: heading
+        icon: ""
+        heading_style: subtitle
+      - type: logbook
+        title: KWL Aktionen (letzte 24h)
+        hours_to_show: 24
+        entities:
+          - sensor.maico_betriebsart
+          - sensor.maico_aktueller_volumenstrom_zul
+          - sensor.kwl_bypass
+        grid_options:
+          columns: 12
+          rows: 8
+      - type: history-graph
+        title: Δ Abs. Feuchte (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.thermal_comfort_absolute_luftfeuchtigkeit
+            name: Außen
+          - entity: sensor.thermal_comfort_kinderzimmer_absolute_luftfeuchtigkeit
+          - entity: sensor.thermal_comfort_wohnzimmer_absolute_luftfeuchtigkeit
+    column_span: 1
+  - type: grid
+    cards:
+      - type: heading
+        heading: Temperaturen
+        heading_style: title
+      - type: gauge
+        entity: sensor.wh2650a_temperature_3
+        name: Wohnzimmer
+        min: 16
+        max: 28
+        needle: true
+        segments:
+          - from: 16
+            color: "#1565C0"
+          - from: 18
+            color: "#30A040"
+          - from: 23
+            color: "#E8A020"
+          - from: 26
+            color: "#D04030"
+      - type: gauge
+        name: Aussen
+        min: 0
+        max: 30
+        needle: true
+        segments:
+          - from: 16
+            color: "#1565C0"
+          - from: 18
+            color: "#30A040"
+          - from: 23
+            color: "#E8A020"
+          - from: 26
+            color: "#D04030"
+        grid_options:
+          columns: 3
+          rows: auto
+        entity: sensor.wh2650a_outdoor_temperature
+      - type: gauge
+        name: Kinderzimmer
+        min: 16
+        max: 28
+        needle: true
+        segments:
+          - from: 16
+            color: "#1565C0"
+          - from: 18
+            color: "#30A040"
+          - from: 23
+            color: "#E8A020"
+          - from: 26
+            color: "#D04030"
+        entity: sensor.wh2650a_temperature_8
+        grid_options:
+          columns: 3
+          rows: auto
+      - type: gauge
+        name: Schlafzimmer
+        min: 16
+        max: 28
+        needle: true
+        segments:
+          - from: 16
+            color: "#1565C0"
+          - from: 18
+            color: "#30A040"
+          - from: 23
+            color: "#E8A020"
+          - from: 26
+            color: "#D04030"
+        grid_options:
+          columns: 3
+          rows: auto
+        entity: sensor.wh2650a_indoor_temperature
+      - type: history-graph
+        title: Zuluft m³/h (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.maico_aktueller_volumenstrom_zul
+            name: Zuluft
+          - entity: sensor.maico_aktueller_volumenstrom_abl
+            name: Abluft
+      - type: history-graph
+        title: Betriebsmodus (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.maico_betriebsart
+            name: Modus
+      - type: history-graph
+        title: Bypass offen/zu (24h)
+        hours_to_show: 24
+        entities:
+          - entity: sensor.kwl_bypass
+            name: Bypass
+    column_span: 1
+theme: Frosted Glass Dark

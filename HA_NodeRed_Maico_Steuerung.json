@@ -1,0 +1,756 @@
+[
+    {
+        "id": "0593f98386cdf30b",
+        "type": "tab",
+        "label": "Maico Lüftungssteuerung",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "20c8b6ee8cbd44b4",
+        "type": "comment",
+        "z": "0593f98386cdf30b",
+        "name": "═══ KONFIGURATION ═══",
+        "info": "",
+        "x": 170,
+        "y": 75,
+        "wires": []
+    },
+    {
+        "id": "c5bbbedc39a036f8",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "⚙️ Konfiguration laden",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.5",
+        "topic": "",
+        "x": 170,
+        "y": 115,
+        "wires": [
+            [
+                "9a331ff260df5530"
+            ]
+        ]
+    },
+    {
+        "id": "9a331ff260df5530",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Konfiguration speichern",
+        "func": "// ══════════════════════════════════════════════════════════════\n// KONFIGURATION - HIER ANPASSEN!\n// ══════════════════════════════════════════════════════════════\n\n// Home Assistant REST API\nflow.set('haUrl', 'http://homeassistant.local:8123');\nflow.set('haToken', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJiZTE4ZTMwMTk1YzI0OGU1YjdjZjJjNWU3YjVhNjY1NyIsImlhdCI6MTc3MzA0NDA5MywiZXhwIjoyMDg4NDA0MDkzfQ.QQxCkXdmKawHQWPEw8wU4jGWOq1-0qAnBrNBdbvFrBg');\n\n// Modbus Hub Name (aus configuration.yaml)\nflow.set('modbusHub', 'Maico KWL');\n\n// Zeitfenster\nflow.set('tageszeitStart', 6.0);\nflow.set('tageszeitEnde', 21.0);\nflow.set('nachtzeitStart', 21.0);   \nflow.set('nachtzeitEnde', 5.0);\n\n// Volumenstrom\nflow.set('flowRateEnabled', true);\nflow.set('flowRateMin', 80);\nflow.set('flowRateMax', 210);\nflow.set('flowRateStep', 5);\nflow.set('flowRateMaxStep', 20);\nflow.set('flowRateNightMax', 200);  \n\n// Raumtemperatur-Sensoren\n\nflow.set('roomSensors', [\n    { id: 'sensor.wh2650a_temperature_3',      name: 'Wohnzimmer',  target: 22.5, weight: 1.75 },\n    { id: 'sensor.wh2650a_indoor_temperature', name: 'Schlafzimmer', target: 20.5, weight: 1.5 },\n    { id: 'sensor.wh2650a_temperature_8',      name: 'Kinderzimmer', target: 20.5, weight: 2.5 }\n]);\n\n// Absolute Feuchte\nflow.set('absHumKinderzimmer',   'sensor.thermal_comfort_kinderzimmer_absolute_luftfeuchtigkeit');\nflow.set('taupunktKinderzimmer', 'sensor.thermal_comfort_kinderzimmer_taupunkt');\n\n// Feuchtigkeits-Sensoren\nflow.set('humidityBathroom', 'sensor.wh2650a_humidity_7');\nflow.set('humidityOutdoor',  'sensor.wh2650a_humidity');\nflow.set('humidityIndoor',   'sensor.wh2650a_indoor_humidity');\n\n// Duschenerkennung\nflow.set('showerEnabled', true);\nflow.set('showerThresholdMild',   8);\nflow.set('showerThresholdStrong', 15);\nflow.set('showerBoostMild',   40);\nflow.set('showerBoostStrong', 80);\n\n// NACHHER:\nflow.set('bypassOpenOffset',  1.5);   // Bypass öffnet früher\nflow.set('bypassCloseOffset', 1.5);   // Bypass schließt nicht zu aggressiv\nflow.set('bypassSeasons', ['spring', 'summer', 'autumn']);  // Auch Herbst\n\n// Jahreszeiten\nflow.set('seasons', {\n    spring: { start: '03-20', end: '06-20' },\n    summer: { start: '06-21', end: '09-22' },\n    autumn: { start: '09-23', end: '12-20' },\n    winter: { start: '12-21', end: '03-19' }\n});\n\n// Debug\nflow.set('debugMode', false);\n\nnode.log('Konfiguration gespeichert');\nmsg.payload = 'Konfiguration geladen';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 435,
+        "y": 125,
+        "wires": [
+            [
+                "5cd13501e290652a"
+            ]
+        ]
+    },
+    {
+        "id": "4a30895a8ec72766",
+        "type": "comment",
+        "z": "0593f98386cdf30b",
+        "name": "═══ HAUPTLOGIK ═══",
+        "info": "",
+        "x": 150,
+        "y": 155,
+        "wires": []
+    },
+    {
+        "id": "b5f8587be3f584b4",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "🔄 Auto (5 Min)",
+        "props": [],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "60",
+        "topic": "",
+        "x": 160,
+        "y": 195,
+        "wires": [
+            [
+                "1bd0ec7c4abf60f1"
+            ]
+        ]
+    },
+    {
+        "id": "7779ebd2a806346b",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "▶️ Manueller Trigger",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 255,
+        "wires": [
+            [
+                "1bd0ec7c4abf60f1"
+            ]
+        ]
+    },
+    {
+        "id": "2e2f1f6bdcb57c1a",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "🔄 Reset",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 140,
+        "y": 315,
+        "wires": [
+            [
+                "def359e5117d2ad4"
+            ]
+        ]
+    },
+    {
+        "id": "def359e5117d2ad4",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Reset",
+        "func": "context.set('lastMode', null);\ncontext.set('lastFlowRate', null);\ncontext.set('lastSeason', null);\ncontext.set('lastRoomTempMax', null);\ncontext.set('sent_reg_552', null);\ncontext.set('sent_reg_302', null);\ncontext.set('sent_reg_550', null);\ncontext.set('sent_reg_155', null);\n\nflow.set('kwl_prev_bath_rh', null);\nnode.warn('System zurückgesetzt');\nmsg.payload = 'Reset OK';\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 315,
+        "wires": [
+            [
+                "5cd13501e290652a"
+            ]
+        ]
+    },
+    {
+        "id": "1bd0ec7c4abf60f1",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Step 1: Sensordaten",
+        "func": "var states = global.get('homeassistant.homeAssistant.states') || {};\nvar DEBUG = flow.get('debugMode') || false;\n\nfunction getState(id) { return states[id] ? states[id].state : null; }\nfunction getNum(id, fb) { var v = parseFloat(getState(id)); return isNaN(v) ? (fb || null) : v; }\n\nvar roomSensors = flow.get('roomSensors') || [];\n\nvar data = {\n    outdoorTemp: getNum('sensor.wh2650a_outdoor_temperature'),\n    currentMode: parseInt(getState('sensor.maico_betriebsart')),\n    currentFlowRate: getNum('sensor.maico_aktueller_volumenstrom_zul', 0),\n    currentFlowRateExhaust: getNum('sensor.maico_aktueller_volumenstrom_abl', 0),\n    bathroomHumidity: getNum(flow.get('humidityBathroom')),\n    outdoorHumidity: getNum(flow.get('humidityOutdoor')),\n    indoorHumidity: getNum(flow.get('humidityIndoor')),\n    filterAlarm: getState('sensor.kwl_filteralarm') === 'alarm',\n    rooms: [],\n    timestamp: new Date().toISOString()\n};\ndata.absHumOutdoor = getNum('sensor.thermal_comfort_absolute_luftfeuchtigkeit');\ndata.absHumIndoor = getNum('sensor.thermal_comfort_wohnzimmer_absolute_luftfeuchtigkeit');\ndata.absHumKinderzimmer = getNum(flow.get('absHumKinderzimmer'));\ndata.taupunktKinderzimmer = getNum(flow.get('taupunktKinderzimmer'));\ndata.lufteintrittTemp = getNum('sensor.maico_temperatur_lufteintritt');\n// oder je nach Sensor-Wert z.B. '1'/'0' oder 'open'/'closed'\n// → anpassen auf den tatsächlichen Wert des Sensors\n// NEU v2.3: Zuluft-Temperatur nach Wärmetauscher/Bypass\ndata.zuluftTemp = getNum('sensor.maico_temperatur_zuluft');\ndata.bypassOffen = getState('sensor.kwl_bypass') === 'Bypass Auf';\n\nvar validRooms = 0;\nroomSensors.forEach(function(sensor) {\n    var temp = getNum(sensor.id);\n    if (temp !== null && temp >= 10 && temp <= 35) {\n        data.rooms.push({ id: sensor.id, name: sensor.name, temp: temp, target: sensor.target, weight: sensor.weight });\n        validRooms++;\n    } else if (temp !== null) {\n        node.warn('Sensor ' + sensor.name + ' außerhalb Bereich: ' + temp + '°C (ignoriert)');\n    }\n});\n\nif (data.currentMode === 5 && data.currentFlowRate === 0 && data.currentFlowRateExhaust > 0) {\n    data.currentFlowRate = data.currentFlowRateExhaust;\n} else if (data.currentFlowRate === 0) {\n    data.currentFlowRate = 150;\n}\n\nif (data.outdoorTemp === null || data.outdoorTemp < -40 || data.outdoorTemp > 50) {\n    node.error('Ungueltige Aussentemperatur: ' + data.outdoorTemp);\n    node.status({ fill: 'red', shape: 'ring', text: 'Sensor-Fehler Außentemp' });\n    return null;\n}\n\nif (validRooms === 0) {\n    node.error('Keine gültigen Raumsensoren!');\n    node.status({ fill: 'red', shape: 'ring', text: 'Keine Raumsensoren' });\n    return null;\n}\n\nnode.status({ fill: 'green', shape: 'dot', text: validRooms + ' Räume | ' + data.outdoorTemp + '°C | Zuluft ' + (data.zuluftTemp || '?') + '°C | Modus ' + data.currentMode });\nmsg.payload = data;\n\nvar shadingStatus = global.get('shading_status') || {};\nvar dwdForecast = shadingStatus.forecastTemp || null;\nvar forecastDetails = flow.get('dwd_forecast_details') || {};\n\ndata.forecast = {\n    maxTemp:       dwdForecast,\n    condition:     forecastDetails.condition     || null,\n    precipitation: forecastDetails.precipitation || 0,\n    cloudCover:    shadingStatus.cloudCover      || null,\n    source:        dwdForecast ? 'shading_global' : 'none'\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 225,
+        "wires": [
+            [
+                "5cd13501e290652a",
+                "126be5e0d76b47cd",
+                "88b96626b4216bf0"
+            ]
+        ]
+    },
+    {
+        "id": "1c37d5da2536a837",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Step 2: Steuerungslogik",
+        "func": "// ══════════════════════════════════════════════════════════════\n// STEP 2: STEUERUNGSLOGIK\n// Version: 2.5.0 — KfW40+ Delta-Schwelle für Bypass vs Eco-Abluft\n// Änderungen gegenüber v2.4.9:\n//   - NEU: Mindest-Delta 2.5K für Bypass-Kühlung (KfW40+ optimiert)\n//          Bei kleinerem Delta → Eco-Abluft (kühle Raumluft konservieren)\n//   - FIX: Hardware-Lock nur wenn Delta < 2.5K UND Außen >= Schwelle\n//          (nicht mehr pauschal ab 20.5°C)\n//   - Eco-Abluft weiterhin Tag+Nacht aktiv (v2.4.9)\n//   - Bypass öffnet nur noch wenn sich Kühlung wirklich lohnt\n// ══════════════════════════════════════════════════════════════\n\nvar d = msg.payload || {};\nvar DEBUG = flow.get('debugMode') || false;\n\n// ── Konfiguration laden ───────────────────────────────────────\nvar config = {\n    tageszeitStart: flow.get('tageszeitStart'),\n    tageszeitEnde:  flow.get('tageszeitEnde'),\n    nachtzeitStart: flow.get('nachtzeitStart'),\n    nachtzeitEnde:  flow.get('nachtzeitEnde'),\n    flow: {\n        min:      flow.get('flowRateMin'),\n        max:      flow.get('flowRateMax'),\n        step:     flow.get('flowRateStep'),\n        maxStep:  flow.get('flowRateMaxStep'),\n        nightMax: flow.get('flowRateNightMax')\n    },\n    shower: {\n        enabled: flow.get('showerEnabled'),\n        tMild:   flow.get('showerThresholdMild'),\n        tStrong: flow.get('showerThresholdStrong'),\n        bMild:   flow.get('showerBoostMild'),\n        bStrong: flow.get('showerBoostStrong')\n    }\n};\n\nvar ECO_ABLUFT_SCHWELLE = flow.get('ecoAbluftSchwelle') || 20.5;\n\n// KfW40+ Mindest-Delta für sinnvolle Bypass-Kühlung\n// Unter diesem Delta bringt Bypass kaum Kühlung, tauscht aber kühle Raumluft aus\nvar BYPASS_MIN_DELTA = 2.5;\n\nvar BYPASS_OPEN_OFFSET  = d.bypassOpenOffsetEffective  || flow.get('bypassOpenOffset')  || 1.5;\nvar BYPASS_CLOSE_OFFSET = d.bypassCloseOffsetEffective || flow.get('bypassCloseOffset') || 1.5;\nvar nightBoostMultiplier = (d.forecastModifiers && d.forecastModifiers.nightBoostMultiplier) || 1.0;\n\nvar MAX_SCHWELLE = 210;\nvar BYPASS_ZULUFT_MIN = 8.0;\nvar BYPASS_RESTERHITZUNG_MIN = 20.0;\n\n// ── Status & Zeit ─────────────────────────────────────────────\nvar lastMode       = context.get('lastMode')       || d.currentMode;\nvar lastFlowRate   = context.get('lastFlowRate')   || d.currentFlowRate || 150;\nvar lastTargetFlow = context.get('lastTargetFlow') || lastFlowRate;\n\nvar now = new Date();\nvar currentTime = now.getHours() + (now.getMinutes() / 60);\nvar isNight = currentTime >= config.nachtzeitStart || currentTime < config.nachtzeitEnde;\n\nvar modeNames = { 0: 'Aus', 1: 'Manuell', 2: 'Auto Zeit', 3: 'Auto Sensor', 4: 'Eco-Zuluft', 5: 'Eco-Abluft' };\n\n// ── Raumanalyse ───────────────────────────────────────────────\nvar totalDeviation = 0;\nvar totalWeight    = 0;\n(d.rooms || []).forEach(function (r) {\n    totalDeviation += (r.temp - r.target) * r.weight;\n    totalWeight    += r.weight;\n});\nvar avgTempDeviation = totalWeight > 0 ? totalDeviation / totalWeight : 0;\nvar avgIndoorTemp = d.rooms.reduce(function (s, r) { return s + r.temp; }, 0) / d.rooms.length;\n\n// Zentrales Delta für alle Entscheidungen\nvar bypassDelta = avgIndoorTemp - d.outdoorTemp;\n\n// ── Jahreszeit ────────────────────────────────────────────────\nfunction getSeason() {\n    var md = (now.getMonth() + 1).toString().padStart(2, '0') + '-' + now.getDate().toString().padStart(2, '0');\n    var s = flow.get('seasons');\n    var seasonOrder = ['spring', 'summer', 'autumn', 'winter'];\n    for (var i = 0; i < seasonOrder.length; i++) {\n        var n = seasonOrder[i];\n        if (!s[n]) continue;\n        if (s[n].start <= s[n].end) {\n            if (md >= s[n].start && md <= s[n].end) return n;\n        } else {\n            if (md >= s[n].start || md <= s[n].end) return n;\n        }\n    }\n    return 'winter';\n}\nvar currentSeason = getSeason();\nvar bypassAllowed = (flow.get('bypassSeasons') || []).indexOf(currentSeason) >= 0;\n\n// ── Bypass-Erlaubnis: Taupunkt + Zuluft-Mindesttemperatur ─────\nvar bypassZuluftGesperrt = false;\nvar taupunktMarginUsed = 1.0;\n\n// v2.4.8: Taupunkt-Check mit Lufteintritt + dynamischem Margin\nif (d.taupunktKinderzimmer !== null && d.taupunktKinderzimmer !== undefined) {\n    var taupunktRef = d.lufteintrittTemp !== null && d.lufteintrittTemp !== undefined\n        ? d.lufteintrittTemp\n        : d.outdoorTemp;\n    var taupunktRefSource = (taupunktRef === d.lufteintrittTemp) ? 'Eintritt' : 'Aussen';\n\n    taupunktMarginUsed = 1.0;\n    if ((currentSeason === 'summer' || currentSeason === 'spring') && avgTempDeviation > 1.0) {\n        taupunktMarginUsed = 0.5;\n    }\n\n    if (taupunktRef < d.taupunktKinderzimmer + taupunktMarginUsed) {\n        bypassAllowed = false;\n        if (DEBUG) node.log('Bypass gesperrt: ' + taupunktRefSource\n            + ' ' + taupunktRef.toFixed(1) + '°C < Taupunkt+'\n            + taupunktMarginUsed + ' (' + (d.taupunktKinderzimmer + taupunktMarginUsed).toFixed(1) + '°C)');\n    }\n} else {\n    if (d.outdoorTemp < 5.0) bypassAllowed = false;\n}\n\n// Zuluft-Feedback als Bypass-Bremse\nif (d.zuluftTemp !== null && d.zuluftTemp !== undefined && d.zuluftTemp < BYPASS_ZULUFT_MIN) {\n    bypassAllowed = false;\n    bypassZuluftGesperrt = true;\n    if (DEBUG) node.log('Bypass gesperrt: Zuluft ' + d.zuluftTemp + '°C < ' + BYPASS_ZULUFT_MIN + '°C');\n}\n\n// ── Hardware-Lock: Bypass nur bei ausreichendem Kühlpotenzial ──\n// v2.5.0: Sperrt Bypass wenn Außen >= Schwelle UND Delta < 2.5K\n// Bei 21°C außen und 24°C innen (Delta 3K) → Bypass erlaubt\n// Bei 21°C außen und 23°C innen (Delta 2K) → Bypass sinnlos → Lock\nvar bypassHardwareLock = false;\nif (d.outdoorTemp >= ECO_ABLUFT_SCHWELLE && bypassDelta < BYPASS_MIN_DELTA) {\n    bypassAllowed = false;\n    bypassHardwareLock = true;\n    if (DEBUG) node.log('Bypass Lock: außen ' + d.outdoorTemp.toFixed(1) + '°C >= '\n        + ECO_ABLUFT_SCHWELLE + '°C, Delta nur ' + bypassDelta.toFixed(1)\n        + 'K (< ' + BYPASS_MIN_DELTA + 'K, KfW40+ unwirksam)');\n}\n\n// ── Absolute Feuchte Innen (schlechtester Raum) ──────────────\nvar absHumInnenMin = Math.min(\n    d.absHumIndoor !== null && d.absHumIndoor !== undefined ? d.absHumIndoor : 99,\n    d.absHumKinderzimmer !== null && d.absHumKinderzimmer !== undefined ? d.absHumKinderzimmer : 99\n);\nvar absHumInnenMinSensor = (absHumInnenMin === d.absHumKinderzimmer) ? 'Kinderzimmer' : 'Wohnzimmer';\n\nvar aussenFeuchterAlsInnen = (d.absHumOutdoor !== null && d.absHumOutdoor !== undefined)\n    && (d.absHumOutdoor > absHumInnenMin + 0.5);\n\nvar taupunktSicher = (d.taupunktKinderzimmer === null || d.taupunktKinderzimmer === undefined)\n    || (d.outdoorTemp > d.taupunktKinderzimmer + 1.0);\n\nvar anfeuchtungMoeglich = aussenFeuchterAlsInnen\n    && taupunktSicher\n    && bypassAllowed\n    && !isNight;\n\nvar AH_NOTFALL  = 6.0;\nvar AH_KRITISCH = 7.5;\nvar AH_ZIEL     = 9.0;\n\nvar innenZuTrocken_Notfall  = absHumInnenMin < AH_NOTFALL;\nvar innenZuTrocken_Kritisch = absHumInnenMin < AH_KRITISCH;\nvar anfeuchtungNochNoetig   = absHumInnenMin < AH_ZIEL;\n\nif (DEBUG) {\n    node.log('AH-Innen min: ' + absHumInnenMin.toFixed(1) + ' g/m3 (' + absHumInnenMinSensor + ')'\n        + ' | AH-Außen: ' + (d.absHumOutdoor || '?')\n        + ' | anfeuchtungMoeglich: ' + anfeuchtungMoeglich\n        + ' | Zuluft: ' + (d.zuluftTemp || '?') + '°C'\n        + ' | Lufteintritt: ' + (d.lufteintrittTemp || '?') + '°C'\n        + ' | Taupunkt: ' + (d.taupunktKinderzimmer || '?') + '°C (Margin ' + taupunktMarginUsed + 'K)'\n        + ' | bypassAllowed: ' + bypassAllowed\n        + ' | bypassDelta: ' + bypassDelta.toFixed(1) + 'K'\n        + ' | zuluftGesperrt: ' + bypassZuluftGesperrt\n        + ' | bypassOffen (Sensor): ' + d.bypassOffen);\n}\n\n// ── Modus-Logik ───────────────────────────────────────────────\nvar newMode      = 1;\nvar bypassWanted = false;\nvar reason       = 'Standard';\n\nvar outsideCooler = d.outdoorTemp <= avgIndoorTemp - BYPASS_OPEN_OFFSET;\n\n// v2.5.0: Eco-Abluft wenn Außen >= Schwelle UND Delta zu klein für Bypass\n// ODER wenn Außen wärmer als Innen (klassischer Fall)\nvar ecoAbluftAktiv = d.outdoorTemp >= ECO_ABLUFT_SCHWELLE\n    && bypassDelta < BYPASS_MIN_DELTA\n    && avgTempDeviation > 0.3;\n\nif (DEBUG) {\n    node.log('Eco-Abluft-Check: außen=' + d.outdoorTemp.toFixed(1)\n        + '°C, Schwelle=' + ECO_ABLUFT_SCHWELLE\n        + ', bypassDelta=' + bypassDelta.toFixed(1) + 'K'\n        + ', minDelta=' + BYPASS_MIN_DELTA\n        + ', ecoAbluftAktiv=' + ecoAbluftAktiv\n        + ', isNight=' + isNight);\n}\n\n// ════════════════════════════════════════════════════════════\n// PRIORITÄT 1: Gesundheitsgrenze — AH-Notfall\n// ════════════════════════════════════════════════════════════\nif (innenZuTrocken_Notfall && anfeuchtungMoeglich) {\n    newMode = 4;\n    bypassWanted = true;\n    reason = 'AH-Notfall: ' + absHumInnenMin.toFixed(1) + ' g/m3 < ' + AH_NOTFALL + ' (' + absHumInnenMinSensor + ')';\n    if (DEBUG) node.log('Prio 1 aktiv: ' + reason);\n\n// ════════════════════════════════════════════════════════════\n// PRIORITÄT 2: Komfort-Kompromiss (Anfeuchtung)\n// ════════════════════════════════════════════════════════════\n} else if (innenZuTrocken_Kritisch && anfeuchtungNochNoetig && anfeuchtungMoeglich) {\n    newMode = 4;\n    bypassWanted = true;\n    reason = 'Anfeuchtung' + (avgTempDeviation > 0.3 ? '+Kühl-Kompromiss' : '')\n        + ': AH ' + absHumInnenMin.toFixed(1) + ' g/m3 (' + absHumInnenMinSensor + ')';\n    if (DEBUG) node.log('Prio 2 aktiv: ' + reason);\n\n// ════════════════════════════════════════════════════════════\n// PRIORITÄT 3: Eco-Abluft — zu warm oder Delta zu klein\n// v2.5.0: Greift wenn Bypass nichts bringt (Delta < 2.5K bei >= 20.5°C)\n// ════════════════════════════════════════════════════════════\n} else if (ecoAbluftAktiv) {\n    newMode = 5;\n    reason = 'Eco-Abluft: außen ' + d.outdoorTemp.toFixed(1) + '°C >= ' + ECO_ABLUFT_SCHWELLE\n        + '°C, Delta ' + bypassDelta.toFixed(1) + 'K < ' + BYPASS_MIN_DELTA + 'K (KfW40+ unwirksam), Dev +'\n        + avgTempDeviation.toFixed(1) + 'K'\n        + (isNight ? ' [Nacht]' : '');\n\n// ════════════════════════════════════════════════════════════\n// PRIORITÄT 4: Temperatur-Steuerung Sommer + Übergang\n// Hier landen wir NUR wenn Delta >= 2.5K ODER Außen < Schwelle\n// ════════════════════════════════════════════════════════════\n} else if (currentSeason === 'summer' || avgTempDeviation > 0.5) {\n\n    if (isNight && outsideCooler && bypassAllowed) {\n        newMode = 1;\n        bypassWanted = true;\n        reason = 'Nachtkuehlung Balanced (Delta ' + bypassDelta.toFixed(1) + 'K)';\n\n    } else if (!isNight && outsideCooler && bypassAllowed && avgTempDeviation > 0.3) {\n        newMode = 1;\n        bypassWanted = true;\n        reason = 'Tageskuehlung Balanced (aussen ' + d.outdoorTemp.toFixed(1)\n            + ' < innen ' + avgIndoorTemp.toFixed(1) + ', Dev +' + avgTempDeviation.toFixed(1) + 'K, Delta ' + bypassDelta.toFixed(1) + 'K)';\n\n    } else if (!isNight && bypassAllowed\n            && d.outdoorTemp >= BYPASS_RESTERHITZUNG_MIN\n            && avgTempDeviation > 0.3\n            && d.outdoorTemp <= avgIndoorTemp + 1) {\n        newMode = 1;\n        bypassWanted = true;\n        reason = 'WT-Bypass Resterhitzung (aussen ' + d.outdoorTemp.toFixed(1)\n            + '°C >= ' + BYPASS_RESTERHITZUNG_MIN + ', Dev +' + avgTempDeviation.toFixed(1) + 'K)';\n\n    } else {\n        newMode = 1;\n        reason = 'Sommer Balanced (Dev ' + avgTempDeviation.toFixed(1) + 'K'\n            + (bypassZuluftGesperrt ? ', Zuluft<' + BYPASS_ZULUFT_MIN + '°C' : '')\n            + (bypassHardwareLock ? ', HW-Lock Delta<' + BYPASS_MIN_DELTA + 'K' : '')\n            + (!bypassAllowed && !bypassZuluftGesperrt && !bypassHardwareLock ? ', Bypass gesperrt' : '') + ')';\n    }\n\n// ════════════════════════════════════════════════════════════\n// PRIORITÄT 5: Übergangszeit / Winter ohne starke Abweichung\n// ════════════════════════════════════════════════════════════\n} else {\n    if ((currentSeason === 'spring' || currentSeason === 'autumn') && outsideCooler && bypassAllowed && avgTempDeviation > 0.3) {\n        newMode = 1;\n        bypassWanted = true;\n        reason = 'Uebergang Bypass Balanced (Dev +' + avgTempDeviation.toFixed(1) + 'K, Delta ' + bypassDelta.toFixed(1) + 'K)';\n\n    } else if ((currentSeason === 'spring' || currentSeason === 'autumn') && bypassAllowed\n            && d.outdoorTemp >= BYPASS_RESTERHITZUNG_MIN\n            && avgTempDeviation > 0.3\n            && d.outdoorTemp <= avgIndoorTemp + 1) {\n        newMode = 1;\n        bypassWanted = true;\n        reason = 'Uebergang WT-Bypass Resterhitzung (aussen ' + d.outdoorTemp.toFixed(1)\n            + '°C >= ' + BYPASS_RESTERHITZUNG_MIN + ', Dev +' + avgTempDeviation.toFixed(1) + 'K)';\n\n    } else if (currentSeason === 'spring' || currentSeason === 'autumn') {\n        newMode = 1;\n        reason = 'Uebergang Balanced';\n\n    } else {\n        newMode = 1;\n        reason = 'Winter Balanced';\n    }\n}\n\n// ── Bypass-Register 302 ───────────────────────────────────────\nvar targetRoomTempMax;\nif (bypassWanted) {\n    var basisSchwelle = (avgIndoorTemp - BYPASS_OPEN_OFFSET) * 10;\n    targetRoomTempMax = Math.min(basisSchwelle, MAX_SCHWELLE);\n\n    if (d.zuluftTemp !== null && d.zuluftTemp !== undefined && d.zuluftTemp > d.outdoorTemp + 2) {\n        var zuluftBasiert = (d.zuluftTemp - 1.0) * 10;\n        targetRoomTempMax = Math.min(targetRoomTempMax, zuluftBasiert);\n        if (DEBUG) node.log('Bypass Zuluft-Feedback: Zuluft ' + d.zuluftTemp + '°C → Schwelle ' + (targetRoomTempMax / 10).toFixed(1) + '°C');\n    }\n} else {\n    targetRoomTempMax = (avgIndoorTemp + BYPASS_CLOSE_OFFSET) * 10;\n}\ntargetRoomTempMax = Math.max(180, Math.min(300, Math.round(targetRoomTempMax / 5) * 5));\n\n// ── Bypass-Validierung (echter Sensor primär) ─────────────────\nvar bypassEffektiv = null;\nvar validierungSource = 'kwl_bypass Sensor';\n\nif (d.bypassOffen !== null && d.bypassOffen !== undefined) {\n    bypassEffektiv = d.bypassOffen === true;\n\n    if (bypassWanted && !bypassEffektiv) {\n        node.warn('⚠️ Bypass-Mismatch: gewollt OFFEN, aber Sensor meldet GESCHLOSSEN'\n            + ' (Reg.302=' + targetRoomTempMax + ' = ' + (targetRoomTempMax / 10).toFixed(1) + '°C)');\n    }\n    if (!bypassWanted && bypassEffektiv) {\n        if (DEBUG) node.log('Info: Bypass laut Sensor OFFEN obwohl nicht gewollt');\n    }\n\n} else {\n    validierungSource = d.lufteintrittTemp !== null && d.lufteintrittTemp !== undefined\n        ? 'Lufteintritt (Fallback)'\n        : 'Wetterstation (Fallback)';\n    var validierungRef = d.lufteintrittTemp !== null && d.lufteintrittTemp !== undefined\n        ? d.lufteintrittTemp\n        : d.outdoorTemp;\n\n    if (d.zuluftTemp !== null && d.zuluftTemp !== undefined && validierungRef !== null) {\n        var zuluftDelta = d.zuluftTemp - validierungRef;\n        if (bypassWanted) {\n            bypassEffektiv = zuluftDelta < 1.0;\n            if (!bypassEffektiv && zuluftDelta > 3.0) {\n                node.warn('⚠️ Bypass-Mismatch (Heuristik): gewollt OFFEN, Zuluft '\n                    + d.zuluftTemp + '°C >> ' + validierungSource + ' '\n                    + validierungRef.toFixed(1) + '°C (Delta ' + zuluftDelta.toFixed(1) + 'K)');\n            }\n        } else {\n            bypassEffektiv = zuluftDelta < 2.0;\n        }\n    }\n    if (DEBUG) node.log('Bypass-Sensor nicht verfügbar, Heuristik genutzt');\n}\n\n// ── Volumenstrom ──────────────────────────────────────────────\nvar targetFlowRate = 110;\nvar flowReasons    = [];\nvar showerBoostActive = false;\n\n// Thermik-Boost\nif (avgTempDeviation > 0) {\n    var boost = Math.round(avgTempDeviation * 30);\n    targetFlowRate += boost;\n    flowReasons.push('Temp: +' + boost);\n}\n\n// Nacht-Boost: delta-abhängig\nif (bypassWanted && isNight && outsideCooler) {\n    var nightDelta = bypassDelta;\n    var nightBoostBase = 140;\n    if (nightDelta > 7)      nightBoostBase = 200;\n    else if (nightDelta > 5) nightBoostBase = 180;\n    else if (nightDelta > 3) nightBoostBase = 160;\n\n    var nightBoostTarget = Math.round((nightBoostBase * nightBoostMultiplier) / config.flow.step) * config.flow.step;\n    nightBoostTarget = Math.min(nightBoostTarget, config.flow.nightMax);\n    targetFlowRate = Math.max(targetFlowRate, nightBoostTarget);\n    flowReasons.push('Night-Cool: Delta ' + nightDelta.toFixed(1) + 'K, x' + nightBoostMultiplier.toFixed(2) + ' -> ' + nightBoostTarget + ' m3/h');\n}\n\n// Tag-Bypass-Boost inkl. Forecast-Vorkühlung\nif (bypassWanted && !isNight && outsideCooler) {\n    var dayDelta = bypassDelta;\n    var dayBoostTarget = 100;\n    if (dayDelta > 7)        dayBoostTarget = 220;\n    else if (dayDelta > 5)   dayBoostTarget = 200;\n    else if (dayDelta > 3)   dayBoostTarget = 170;\n    else if (dayDelta > 1.5) dayBoostTarget = 140;\n\n    // Vorkühlung-Boost bei heißem Forecast (morgens 6-12 Uhr)\n    var forecastAggr = (d.forecastModifiers && d.forecastModifiers.bypassAggressiveness) || 0;\n    if (forecastAggr >= 1 && currentTime >= 6 && currentTime <= 12) {\n        var virtualDelta = dayDelta + (forecastAggr * 2);\n        var forecastBoost = 100;\n        if (virtualDelta > 7)        forecastBoost = 220;\n        else if (virtualDelta > 5)   forecastBoost = 200;\n        else if (virtualDelta > 3)   forecastBoost = 170;\n        else if (virtualDelta > 1.5) forecastBoost = 140;\n\n        if (forecastBoost > dayBoostTarget) {\n            flowReasons.push('Vorkuehlung: Forecast hot (Aggr=' + forecastAggr + '), virtuell +' + (forecastAggr * 2) + 'K -> ' + forecastBoost + ' m3/h');\n            dayBoostTarget = forecastBoost;\n        }\n    }\n\n    // Kalt-Bypass-Cap\n    if (d.zuluftTemp !== null && d.zuluftTemp < 12) {\n        dayBoostTarget = Math.min(dayBoostTarget, 100);\n        flowReasons.push('Kalt-Bypass-Cap: Zuluft ' + d.zuluftTemp + '°C → max 100 m3/h');\n    }\n\n    targetFlowRate = Math.max(targetFlowRate, dayBoostTarget);\n    flowReasons.push('Tag-Bypass: Delta ' + dayDelta.toFixed(1) + 'K -> ' + dayBoostTarget + ' m3/h');\n}\n\n// Dusche\nif (config.shower.enabled && d.bathroomHumidity !== null) {\n    var prevH      = flow.get('kwl_prev_bath_rh');\n    var lastUpdate = flow.get('kwl_prev_bath_time') || 0;\n    var nowMs      = Date.now();\n    if (prevH === null || nowMs - lastUpdate > 3600000) {\n        prevH = d.bathroomHumidity;\n        if (DEBUG) node.log('Duschenerkennung initialisiert/zurückgesetzt');\n    }\n    var deltaH = d.bathroomHumidity - prevH;\n    flow.set('kwl_prev_bath_rh',   d.bathroomHumidity);\n    flow.set('kwl_prev_bath_time', nowMs);\n    if (deltaH >= config.shower.tMild) {\n        var sBoost = deltaH >= config.shower.tStrong ? config.shower.bStrong : config.shower.bMild;\n        targetFlowRate += sBoost;\n        flowReasons.push('Dusche: +' + sBoost);\n        showerBoostActive = true;\n    }\n}\n\n// ── AH-basierter Flow-Cap ─────────────────────────────────────\nvar ahFlowCap;\nif (innenZuTrocken_Notfall && anfeuchtungMoeglich) {\n    ahFlowCap = config.flow.min;\n    flowReasons.push('AH-Notbremse: ' + absHumInnenMin.toFixed(1) + ' g/m3 → max ' + config.flow.min + ' m3/h');\n\n} else if (innenZuTrocken_Kritisch && anfeuchtungMoeglich) {\n    var kuehlBeitrag = avgTempDeviation > 0 ? Math.round(avgTempDeviation * 20) : 0;\n    ahFlowCap = Math.min(120, 80 + kuehlBeitrag);\n    flowReasons.push('AH-Bremse: ' + absHumInnenMin.toFixed(1) + ' g/m3 → cap ' + ahFlowCap + ' m3/h');\n\n} else if (anfeuchtungNochNoetig && anfeuchtungMoeglich) {\n    ahFlowCap = 150;\n    flowReasons.push('AH-sanft: ' + absHumInnenMin.toFixed(1) + ' g/m3 → cap 150 m3/h');\n\n} else if (d.absHumOutdoor !== null && d.absHumIndoor !== null && !anfeuchtungMoeglich) {\n    if (d.absHumOutdoor - d.absHumIndoor < -2.0) {\n        targetFlowRate = Math.max(config.flow.min, targetFlowRate - 40);\n        flowReasons.push('Trockenschutz: -40 m3/h (außen trockener)');\n    }\n    ahFlowCap = isNight ? config.flow.nightMax : config.flow.max;\n\n} else {\n    ahFlowCap = isNight ? config.flow.nightMax : config.flow.max;\n}\n\n// Cap anwenden\ntargetFlowRate = Math.min(ahFlowCap, targetFlowRate);\ntargetFlowRate = Math.max(config.flow.min, Math.min(isNight ? config.flow.nightMax : config.flow.max, targetFlowRate));\ntargetFlowRate = Math.round(targetFlowRate / config.flow.step) * config.flow.step;\n\n// Hysterese\nif (Math.abs(targetFlowRate - lastTargetFlow) < 8 && !showerBoostActive) {\n    targetFlowRate = lastTargetFlow;\n} else {\n    context.set('lastTargetFlow', targetFlowRate);\n}\n\n// Max Step pro Zyklus\nvar diff = targetFlowRate - lastFlowRate;\nif (Math.abs(diff) > config.flow.maxStep) {\n    targetFlowRate = lastFlowRate + (diff > 0 ? config.flow.maxStep : -config.flow.maxStep);\n}\n\n// ── Befehle generieren ────────────────────────────────────────\nvar commands = [];\nif (targetRoomTempMax !== context.get('lastRoomTempMax'))\n    commands.push({ type: 'roomtempmax', register: 302, value: targetRoomTempMax });\nif ((bypassAllowed ? 1 : 0) !== context.get('lastSeasonReg'))\n    commands.push({ type: 'season', register: 552, value: bypassAllowed ? 1 : 0 });\nif (targetFlowRate !== lastFlowRate)\n    commands.push({ type: 'flowrate', register: 155, value: targetFlowRate });\nif (newMode !== lastMode)\n    commands.push({ type: 'mode', register: 550, value: newMode });\n\ncontext.set('lastMode',        newMode);\ncontext.set('lastFlowRate',    targetFlowRate);\ncontext.set('lastRoomTempMax', targetRoomTempMax);\ncontext.set('lastSeasonReg',   bypassAllowed ? 1 : 0);\n\n// ── Ausgabe ───────────────────────────────────────────────────\nmsg.payload = {\n    commands: commands,\n    mode: { name: modeNames[newMode], reason: reason },\n    flowRate: {\n        new:     targetFlowRate,\n        old:     lastFlowRate,\n        delta:   targetFlowRate - lastFlowRate,\n        reasons: flowReasons,\n        ahCap:   ahFlowCap\n    },\n    absHum: {\n        out:    d.absHumOutdoor,\n        in:     d.absHumIndoor,\n        kinder: d.absHumKinderzimmer,\n        innenMin:       absHumInnenMin.toFixed(1),\n        innenMinSensor: absHumInnenMinSensor,\n        diff: (d.absHumOutdoor !== null && d.absHumIndoor !== null)\n            ? (d.absHumOutdoor - d.absHumIndoor).toFixed(2) : '?',\n        diffKinder: (d.absHumOutdoor !== null && d.absHumKinderzimmer !== null)\n            ? (d.absHumOutdoor - d.absHumKinderzimmer).toFixed(2) : '?',\n        anfeuchtung: {\n            moeglich:       anfeuchtungMoeglich,\n            aussenFeuchter: aussenFeuchterAlsInnen,\n            taupunktSicher: taupunktSicher,\n            notfall:        innenZuTrocken_Notfall,\n            kritisch:       innenZuTrocken_Kritisch,\n            nochNoetig:     anfeuchtungNochNoetig\n        }\n    },\n    bypass: {\n        wanted:           bypassWanted,\n        effektiv:         bypassEffektiv,\n        sensorDirekt:     d.bypassOffen !== null && d.bypassOffen !== undefined,\n        hardwareLock:     bypassHardwareLock,\n        reg302:           targetRoomTempMax,\n        maxSchwelle:      MAX_SCHWELLE,\n        openOffset:       BYPASS_OPEN_OFFSET,\n        closeOffset:      BYPASS_CLOSE_OFFSET,\n        outsideCooler:    outsideCooler,\n        deltaT:           bypassDelta.toFixed(1),\n        minDelta:         BYPASS_MIN_DELTA,\n        zuluftTemp:       d.zuluftTemp,\n        lufteintrittTemp: d.lufteintrittTemp,\n        validierungSource: validierungSource,\n        zuluftGesperrt:   bypassZuluftGesperrt,\n        zuluftMin:        BYPASS_ZULUFT_MIN,\n        taupunkt:         d.taupunktKinderzimmer,\n        taupunktMargin:   taupunktMarginUsed\n    },\n    ecoAbluft: {\n        aktiv:      ecoAbluftAktiv,\n        schwelle:   ECO_ABLUFT_SCHWELLE,\n        minDelta:   BYPASS_MIN_DELTA,\n        bypassDelta: bypassDelta.toFixed(1),\n        aussenTemp: d.outdoorTemp,\n        isNight:    isNight\n    },\n    forecastModifiers: d.forecastModifiers || { reason: ['keine Modifier'] },\n    roomLog:          (d.rooms || []).map(function (r) { return r.name + ': ' + r.temp.toFixed(1) + '\\u00b0C'; }).join(' | '),\n    season:           currentSeason,\n    isNight:          isNight,\n    avgTempDeviation: avgTempDeviation.toFixed(2),\n    reg302_display:   targetRoomTempMax\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1010,
+        "y": 125,
+        "wires": [
+            [
+                "791405ee93765abf",
+                "5cd13501e290652a",
+                "df23f1f69eea072d",
+                "900257d05b08003a",
+                "c7037888114d2b7c"
+            ]
+        ]
+    },
+    {
+        "id": "791405ee93765abf",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Step 3: REST API Queue",
+        "func": "var p = msg.payload || {};\nif (!p.commands || p.commands.length === 0) return null;\n\n// FIX #8: Token aus Umgebungsvariable statt Klartext\nvar HA_URL = flow.get('haUrl');\nvar HA_TOKEN = env.get('HA_TOKEN') || flow.get('haToken'); // Fallback auf flow.get\nvar MODBUS_HUB = flow.get('modbusHub');\n\nvar apiCalls = [];\n\np.commands.forEach(function (cmd) {\n    var contextKey = 'sent_reg_' + cmd.register;\n    var lastSentValue = context.get(contextKey);\n\n    if (cmd.value !== lastSentValue) {\n        if (cmd.type === 'flowrate') {\n            // FIX #9: Nur beim ersten Mal die Fix-Register setzen\n            if (!context.get('flowrate_initialized')) {\n                if (context.get('sent_reg_154') !== 80) \n                    apiCalls.push({ address: 154, value: 80, desc: 'Fix Reduziert' });\n                if (context.get('sent_reg_156') !== 300) \n                    apiCalls.push({ address: 156, value: 300, desc: 'Fix Intensiv' });\n                if (context.get('sent_reg_554') !== 3) \n                    apiCalls.push({ address: 554, value: 3, desc: 'Stufe 3' });\n                context.set('flowrate_initialized', true);\n            }\n            apiCalls.push({ address: 155, value: cmd.value, desc: 'Flow ' + cmd.value });\n        } else {\n            apiCalls.push({ address: cmd.register, value: cmd.value, desc: 'Reg ' + cmd.register + ' -> ' + cmd.value });\n        }\n    }\n});\n\nif (apiCalls.length === 0) return null;\n\nflow.set('kwl_api_queue', apiCalls.slice(1));\nflow.set('kwl_api_total', apiCalls.length);\nflow.set('kwl_api_done', 0);\n\nvar first = apiCalls[0];\ncontext.set('sent_reg_' + first.address, first.value);\n\nmsg.url = HA_URL + '/api/services/modbus/write_register';\nmsg.method = 'POST';\nmsg.headers = { 'Authorization': 'Bearer ' + HA_TOKEN, 'Content-Type': 'application/json' };\nmsg.payload = { hub: MODBUS_HUB, slave: 1, address: first.address, value: [first.value] };\n\nnode.status({ fill: 'blue', shape: 'dot', text: 'Sende ' + first.desc });\nreturn [msg, null];\n",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1265,
+        "y": 350,
+        "wires": [
+            [
+                "1f5790f607580171",
+                "5cd13501e290652a"
+            ],
+            [
+                "e6aa385280b1ae38"
+            ]
+        ]
+    },
+    {
+        "id": "1f5790f607580171",
+        "type": "http request",
+        "z": "0593f98386cdf30b",
+        "name": "HA REST API",
+        "method": "use",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1570,
+        "y": 350,
+        "wires": [
+            [
+                "7efcf4f8c0c3a9e0",
+                "894cbdcaf23a5351"
+            ]
+        ]
+    },
+    {
+        "id": "7efcf4f8c0c3a9e0",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Next Call",
+        "func": "var done = flow.get('kwl_api_done') || 0;\ndone++;\nflow.set('kwl_api_done', done);\n\nvar total = flow.get('kwl_api_total') || 0;\nvar queue = flow.get('kwl_api_queue') || [];\nvar DEBUG = flow.get('debugMode') || false;\n\n// FIX #8: Bei Fehler Queue leeren\nif (msg.statusCode !== 200) {\n    node.error('Call ' + done + '/' + total + ' FEHLER: ' + msg.statusCode + ' - ' + msg.payload);\n    flow.set('kwl_api_queue', []); // Queue leeren\n    node.status({ fill: 'red', shape: 'ring', text: 'API-Fehler ' + msg.statusCode });\n    return null;\n}\n\nif (DEBUG) { node.log('Call ' + done + '/' + total + ' OK'); }\n\nif (queue.length === 0) {\n    node.status({ fill: 'green', shape: 'dot', text: done + '/' + total + ' fertig' });\n    return null;\n}\n\nvar next = queue[0];\nflow.set('kwl_api_queue', queue.slice(1));\n\nvar HA_URL = flow.get('haUrl') || 'http://homeassistant.local:8123';\nvar HA_TOKEN = env.get('HA_TOKEN') || flow.get('haToken');\nvar MODBUS_HUB = flow.get('modbusHub') || 'Maico KWL';\n\nmsg.url = HA_URL + '/api/services/modbus/write_register';\nmsg.method = 'POST';\nmsg.headers = {};\nmsg.headers['Authorization'] = 'Bearer ' + HA_TOKEN;\nmsg.headers['Content-Type'] = 'application/json';\nmsg.payload = '{\"hub\":\"' + MODBUS_HUB + '\",\"slave\":1,\"address\":' + next.address + ',\"value\":[' + next.value + ']}';\n\ndelete msg.statusCode;\ndelete msg.responseUrl;\ndelete msg.redirectList;\n\nif (DEBUG) { node.log('Sende ' + (done + 1) + '/' + total + ': ' + next.desc); }\n\nnode.status({ fill: 'blue', shape: 'dot', text: 'Sende ' + (done + 1) + '/' + total + ': ' + next.desc });\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1565,
+        "y": 600,
+        "wires": [
+            [
+                "1f5790f607580171"
+            ]
+        ]
+    },
+    {
+        "id": "894cbdcaf23a5351",
+        "type": "debug",
+        "z": "0593f98386cdf30b",
+        "name": "REST API Status",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "statusCode",
+        "targetType": "msg",
+        "statusVal": "statusCode",
+        "statusType": "auto",
+        "x": 1860,
+        "y": 350,
+        "wires": []
+    },
+    {
+        "id": "e6aa385280b1ae38",
+        "type": "api-call-service",
+        "z": "0593f98386cdf30b",
+        "name": "iPhone Benachrichtigung",
+        "server": "c1a077a740d0bcf2",
+        "version": 7,
+        "debugenabled": true,
+        "action": "notify.mobile_app_iphone_17_marek",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "{\"title\":\"{{payload.title}}\",\"message\":\"{{payload.message}}\"}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": false,
+        "domain": "notify",
+        "service": "mobile_app_iphone_17_marek",
+        "x": 1310,
+        "y": 825,
+        "wires": [
+            [
+                "79ed3f1caaafa4b5"
+            ]
+        ]
+    },
+    {
+        "id": "79ed3f1caaafa4b5",
+        "type": "debug",
+        "z": "0593f98386cdf30b",
+        "name": "Benachrichtigung",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1585,
+        "y": 825,
+        "wires": []
+    },
+    {
+        "id": "5cd13501e290652a",
+        "type": "debug",
+        "z": "0593f98386cdf30b",
+        "name": "Debug",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload",
+        "statusType": "auto",
+        "x": 975,
+        "y": 625,
+        "wires": []
+    },
+    {
+        "id": "d53f371769595735",
+        "type": "comment",
+        "z": "0593f98386cdf30b",
+        "name": "═══ TEST & DEBUG ═══",
+        "info": "",
+        "x": 160,
+        "y": 450,
+        "wires": []
+    },
+    {
+        "id": "ea0621ca3fd1b15d",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "🧪 Test REST API",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 150,
+        "y": 775,
+        "wires": [
+            [
+                "0553898ceb1f59e3"
+            ]
+        ]
+    },
+    {
+        "id": "0553898ceb1f59e3",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Test Modbus Call",
+        "func": "var HA_URL = flow.get('haUrl') || 'http://homeassistant.local:8123';\nvar HA_TOKEN = flow.get('haToken') || '';\nvar MODBUS_HUB = flow.get('modbusHub') || 'Maico KWL';\n\nmsg.url = HA_URL + '/api/services/modbus/write_register';\nmsg.method = 'POST';\nmsg.headers = {};\nmsg.headers['Authorization'] = 'Bearer ' + HA_TOKEN;\nmsg.headers['Content-Type'] = 'application/json';\nmsg.payload = '{\"hub\":\"' + MODBUS_HUB + '\",\"slave\":1,\"address\":302,\"value\":[210]}';\n\nnode.warn('Test Reg.302 (T-Raum max = 21.0°C): ' + msg.payload);\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 775,
+        "wires": [
+            [
+                "65e65c467f308c08"
+            ]
+        ]
+    },
+    {
+        "id": "65e65c467f308c08",
+        "type": "http request",
+        "z": "0593f98386cdf30b",
+        "name": "Test HTTP",
+        "method": "use",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 690,
+        "y": 775,
+        "wires": [
+            [
+                "457b4c514b87f536"
+            ]
+        ]
+    },
+    {
+        "id": "457b4c514b87f536",
+        "type": "debug",
+        "z": "0593f98386cdf30b",
+        "name": "Test Ergebnis",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "statusCode",
+        "statusType": "auto",
+        "x": 930,
+        "y": 775,
+        "wires": []
+    },
+    {
+        "id": "5162e87e3e422137",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "🔔 Test Push",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"title\":\"Test\",\"message\":\"Push funktioniert!\"}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 835,
+        "wires": [
+            [
+                "e6aa385280b1ae38"
+            ]
+        ]
+    },
+    {
+        "id": "887cf9f0d5918e6f",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "🐛 Debug AN",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 155,
+        "y": 495,
+        "wires": [
+            [
+                "c97142119940c615"
+            ]
+        ]
+    },
+    {
+        "id": "ae7cb60e6c654d35",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "🐛 Debug AUS",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "false",
+        "payloadType": "bool",
+        "x": 155,
+        "y": 555,
+        "wires": [
+            [
+                "c97142119940c615"
+            ]
+        ]
+    },
+    {
+        "id": "c97142119940c615",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Debug setzen",
+        "func": "flow.set('debugMode', msg.payload);\nnode.warn('Debug: ' + (msg.payload ? 'AN' : 'AUS'));\nmsg.payload = 'Debug ' + (msg.payload ? 'AN' : 'AUS');\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 355,
+        "y": 525,
+        "wires": [
+            [
+                "5cd13501e290652a"
+            ]
+        ]
+    },
+    {
+        "id": "df23f1f69eea072d",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Step 2b: HA Logbook Event",
+        "func": "var p = msg.payload || {};\nvar HA_URL = flow.get('haUrl');\nvar HA_TOKEN = env.get('HA_TOKEN') || flow.get('haToken');\n\nvar forceLog = (p.bypass && p.bypass.effektiv === false && p.bypass.wanted === true);\nif ((!p.commands || p.commands.length === 0) && !forceLog) return null;\n\nfunction f(val, n) {\n    var num = parseFloat(val);\n    return isNaN(num) ? '?' : num.toFixed(n !== undefined ? n : 1);\n}\n\nvar regLabels = {\n    550: 'Betriebsart',\n    552: 'Bypass-Saison',\n    302: 'Bypass-Temp',\n    155: 'Volumenstrom',\n    154: 'Flow-Reduziert',\n    156: 'Flow-Intensiv',\n    554: 'Stufe'\n};\nvar modeLabels = { 0: 'Aus', 1: 'Manuell', 2: 'AutoZeit', 3: 'AutoSensor', 4: 'Eco-Zu', 5: 'Eco-Ab' };\n\nvar parts = [];\n(p.commands || []).forEach(function (cmd) {\n    var label = regLabels[cmd.register] || ('Reg' + cmd.register);\n    var val = cmd.value;\n    if (cmd.register === 550) val = (modeLabels[cmd.value] || cmd.value);\n    if (cmd.register === 552) val = (cmd.value === 1 ? 'ein' : 'aus');\n    if (cmd.register === 302) val = (cmd.value / 10).toFixed(1) + '\\u00b0C';\n    if (cmd.register === 155 || cmd.register === 154 || cmd.register === 156)\n        val = cmd.value + ' m\\u00b3/h';\n    parts.push(label + '\\u2192' + val);\n});\n\nvar flowReasons = (p.flowRate && p.flowRate.reasons || []).join(', ') || 'keine';\nvar absHum = p.absHum || {};\nvar bypass = p.bypass || {};\nvar anfeuch = absHum.anfeuchtung || {};\n\nvar rooms = (p.roomLog || '').replace(/(\\d+\\.\\d{2,})/g, function (m) {\n    return parseFloat(m).toFixed(1);\n});\n\nvar anfeuchtStatus;\nif (anfeuch.notfall) anfeuchtStatus = 'NOTFALL';\nelse if (anfeuch.kritisch) anfeuchtStatus = 'kritisch';\nelse if (anfeuch.nochNoetig) anfeuchtStatus = 'aktiv';\nelse anfeuchtStatus = 'ok';\n\n// Bypass-Effektiv nur relevant wenn gewollt\nvar bypassEffektivText;\nif (bypass.wanted && bypass.effektiv === true) bypassEffektivText = 'JA';\nelse if (bypass.wanted && bypass.effektiv === false) bypassEffektivText = 'NEIN!';\nelse bypassEffektivText = '-';\n\n// ── Fenster-Empfehlung berechnen ──────────────────────────────\nvar sensorData = flow.get('kwl_last_sensor_data') || {};\nvar outTemp = sensorData.outdoorTemp || 0;\nvar avgIndoorTemp = 0;\nvar roomCount = 0;\n(sensorData.rooms || []).forEach(function (r) {\n    avgIndoorTemp += r.temp;\n    roomCount++;\n});\nif (roomCount > 0) avgIndoorTemp = avgIndoorTemp / roomCount;\n\nvar absHumOut = parseFloat(absHum.out) || null;\nvar absHumIn = parseFloat(absHum.innenMin) || null;\nvar taupunktSicher = anfeuch.taupunktSicher !== false;\nvar isNight = p.isNight || false;\n\nvar deltaT = avgIndoorTemp - outTemp;\n\nvar feuchteOk = true;\nif (absHumOut !== null && absHumIn !== null) {\n    feuchteOk = absHumOut <= absHumIn + 1.5;\n}\n\nvar fensterIcon;\nvar fensterText;\n\nif (deltaT >= 3 && feuchteOk && taupunktSicher && !isNight) {\n    fensterIcon = '\\ud83d\\udfe2';\n    fensterText = 'Fenster auf (' + deltaT.toFixed(0) + 'K k\\u00fchler)';\n} else if (deltaT >= 1 && feuchteOk && taupunktSicher) {\n    fensterIcon = '\\ud83d\\udfe1';\n    fensterText = 'Kipp ok (' + deltaT.toFixed(0) + 'K)';\n    if (isNight) fensterText += ' [Nacht]';\n} else if (deltaT < 0) {\n    fensterIcon = '\\ud83d\\udd34';\n    fensterText = 'Fenster zu! (au\\u00dfen w\\u00e4rmer)';\n} else if (!feuchteOk) {\n    fensterIcon = '\\ud83d\\udd34';\n    fensterText = 'Fenster zu! (au\\u00dfen zu feucht)';\n} else if (!taupunktSicher) {\n    fensterIcon = '\\ud83d\\udd34';\n    fensterText = 'Fenster zu! (Kondensation)';\n} else {\n    fensterIcon = '\\ud83d\\udfe1';\n    fensterText = 'Kurz kippen ok (' + deltaT.toFixed(0) + 'K)';\n}\n\n// v2.4.1: Validierungsquelle im Log anzeigen\nvar bypassValidText = bypass.wanted\n    ? ('effektiv: ' + bypassEffektivText + ' (via ' + (bypass.validierungSource || '?') + ')')\n    : ('effektiv: ' + bypassEffektivText);\n\nvar lines = [\n    'Modus: ' + (p.mode && p.mode.name || '?') + ' | Grund: ' + (p.mode && p.mode.reason || '?'),\n    'Reg: ' + (parts.join(' | ') || '\\u2014'),\n    'Flow: ' + flowReasons + ' | Cap: ' + f(p.flowRate && p.flowRate.ahCap, 0) + ' m\\u00b3/h',\n    'AH: min ' + f(absHum.innenMin, 1) + ' g/m\\u00b3 (' + (absHum.innenMinSensor || '?') + ')'\n    + ' | Wohnen ' + f(absHum.in, 1)\n    + ' | Kinder ' + f(absHum.kinder, 1)\n    + ' | Au\\u00dfen ' + f(absHum.out, 1),\n    'AH Delta: Wohnen ' + f(absHum.diff, 1) + ' | Kinder ' + f(absHum.diffKinder, 1) + ' g/m\\u00b3',\n    'Anfeuchtung: ' + anfeuchtStatus\n    + ' | au\\u00dfen feuchter: ' + (anfeuch.aussenFeuchter ? 'ja' : 'nein')\n    + ' | m\\u00f6glich: ' + (anfeuch.moeglich ? 'ja' : 'nein'),\n    'Bypass: ' + (bypass.wanted ? 'OFFEN' : 'ZU')\n    + ' | ' + bypassValidText\n    + (bypass.zuluftGesperrt ? ' | \\u26a0\\ufe0f Zuluft<' + f(bypass.zuluftMin, 0) + '\\u00b0C!' : '')\n    + ' | Schwelle ' + f(bypass.reg302 / 10, 1) + '\\u00b0C (max ' + f(bypass.maxSchwelle / 10, 1) + '\\u00b0C)'\n    + ' | Zuluft ' + f(bypass.zuluftTemp, 1) + '\\u00b0C'\n    + ' | Eintritt ' + f(bypass.lufteintrittTemp, 1) + '\\u00b0C'\n    + ' | DeltaT ' + (bypass.deltaT || '?') + 'K'\n    + ' | Offset ' + f(bypass.openOffset, 1) + 'K',\n    fensterIcon + ' Fenster: ' + fensterText,\n    'R\\u00e4ume: ' + rooms + ' | TempDev: ' + f(p.avgTempDeviation, 2) + 'K',\n    (p.season || '?') + ' | Nacht: ' + (p.isNight ? 'ja' : 'nein')\n    + ' | Forecast: ' + ((p.forecastModifiers && p.forecastModifiers.reason\n        && p.forecastModifiers.reason.join(', ')) || '\\u2014')\n];\n\nmsg.url = HA_URL + '/api/services/logbook/log';\nmsg.method = 'POST';\nmsg.headers = { 'Authorization': 'Bearer ' + HA_TOKEN, 'Content-Type': 'application/json' };\nmsg.payload = {\n    name: 'KWL Steuerung',\n    message: lines.join(' // '),\n    entity_id: 'sensor.maico_betriebsart',\n    domain: 'kwl'\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1395,
+        "y": 150,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "871281e1a0cd6553",
+        "type": "http request",
+        "z": "0593f98386cdf30b",
+        "name": "HA Logbook REST",
+        "method": "use",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1640,
+        "y": 75,
+        "wires": [
+            [
+                "db94a465a7414008"
+            ]
+        ]
+    },
+    {
+        "id": "db94a465a7414008",
+        "type": "debug",
+        "z": "0593f98386cdf30b",
+        "name": "Logbook Status",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "statusCode",
+        "targetType": "msg",
+        "statusVal": "statusCode",
+        "statusType": "auto",
+        "x": 1880,
+        "y": 75,
+        "wires": []
+    },
+    {
+        "id": "126be5e0d76b47cd",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Step 1b: Forecast Modifier",
+        "func": "var d = msg.payload || {};\nvar fc = d.forecast || {};\n\nvar modifiers = {\n    bypassAggressiveness: 0,\n    refillThresholdOffset: 0,\n    nightBoostMultiplier: 1.0,\n    reason: []\n};\n\nvar maxTemp    = fc.maxTemp    || null;\nvar precip     = fc.precipitation || 0;\nvar condition  = (fc.condition || '').toLowerCase();\nvar cloudCover = fc.cloudCover || null;\n\nif (maxTemp !== null) {\n    if (maxTemp >= 30) {\n        modifiers.bypassAggressiveness = 2;\n        modifiers.nightBoostMultiplier = 1.5;\n        modifiers.reason.push('Heisstag erwartet (' + maxTemp + '°C): Bypass++ / Nacht-Boost x1.5');\n    } else if (maxTemp >= 26) {\n        modifiers.bypassAggressiveness = 1;\n        modifiers.nightBoostMultiplier = 1.25;\n        modifiers.reason.push('Warmer Tag erwartet (' + maxTemp + '°C): Bypass+ / Nacht-Boost x1.25');\n    } else if (maxTemp < 18) {\n        modifiers.bypassAggressiveness = -1;\n        modifiers.reason.push('Kühler Tag erwartet (' + maxTemp + '°C): Bypass konservativ');\n    }\n}\n\nif (precip > 5) {\n    modifiers.refillThresholdOffset = -0.5;\n    modifiers.reason.push('Regen erwartet (' + precip + 'mm): Refill-Schwellwert -0.5 g/m³');\n} else if (precip > 2) {\n    modifiers.refillThresholdOffset = -0.3;\n    modifiers.reason.push('Leichter Regen erwartet (' + precip + 'mm): Refill-Schwellwert -0.3 g/m³');\n}\n\nvar isClear  = condition.indexOf('sunny') >= 0 || condition.indexOf('clear') >= 0 || condition.indexOf('partlycloudy') >= 0;\nvar isCloudy = condition.indexOf('cloudy') >= 0 || condition.indexOf('overcast') >= 0 || (cloudCover !== null && cloudCover > 70);\n\nif (isClear && maxTemp !== null && maxTemp >= 22) {\n    modifiers.nightBoostMultiplier = Math.min(modifiers.nightBoostMultiplier * 1.2, 1.8);\n    modifiers.reason.push('Klar/Sonnig: Nacht-Boost x' + modifiers.nightBoostMultiplier.toFixed(2));\n} else if (isCloudy) {\n    modifiers.nightBoostMultiplier = Math.max(modifiers.nightBoostMultiplier * 0.8, 0.5);\n    modifiers.reason.push('Bewölkt: Nacht-Boost x' + modifiers.nightBoostMultiplier.toFixed(2));\n}\n\n// FIX #11: Multiplikator-Obergrenze an flowRateNightMax anpassen\nvar nightMaxFlow = flow.get('flowRateNightMax') || 170;\nvar maxMultiplier = nightMaxFlow / 140; // = 1.21 bei 170 m³/h\nmodifiers.nightBoostMultiplier = Math.min(modifiers.nightBoostMultiplier, maxMultiplier);\n\nvar baseBypassOpen  = flow.get('bypassOpenOffset')  || 1.0;\nvar baseBypassClose = flow.get('bypassCloseOffset') || 2.0;\nvar aggrFactor = modifiers.bypassAggressiveness * 0.3;\nd.bypassOpenOffsetEffective  = Math.max(0.3, baseBypassOpen  - aggrFactor);\nd.bypassCloseOffsetEffective = Math.max(1.0, baseBypassClose - aggrFactor);\n\nd.forecastModifiers = modifiers;\n\nif (modifiers.reason.length > 0) {\n    node.status({ fill: 'blue', shape: 'dot', text: 'Forecast: ' + modifiers.reason.join(' | ') });\n} else {\n    node.status({ fill: 'grey', shape: 'ring', text: 'Kein Forecast-Modifier aktiv' });\n}\n\nmsg.payload = d;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 745,
+        "y": 225,
+        "wires": [
+            [
+                "1c37d5da2536a837"
+            ]
+        ]
+    },
+    {
+        "id": "900257d05b08003a",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "STEP 2c: FENSTER-LÜFTUNGSEMPFEHLUNG",
+        "func": "// ══════════════════════════════════════════════════════════════\n// STEP 2c: FENSTER-LÜFTUNGSEMPFEHLUNG\n// Version: 1.0 — Push-Benachrichtigung bei Statuswechsel\n// Aktivierung: flow.set('fensterHinweisEnabled', true)\n// ══════════════════════════════════════════════════════════════\n\nvar p = msg.payload || {};\nvar enabled = flow.get('fensterHinweisEnabled') || false;\nif (!enabled) return null;\n\nvar bypass = p.bypass || {};\nvar absHum = p.absHum || {};\nvar anfeuch = absHum.anfeuchtung || {};\nvar d = msg.sensorData || p;  // Fallback\n\n// Werte aus Step 2 Output\nvar outdoorTemp = parseFloat(bypass.deltaT) ? (parseFloat(p.roomLog ? p.roomLog.match(/[\\d.]+/) : 22) - parseFloat(bypass.deltaT)) : null;\nvar avgIndoorTemp = 0;\nvar rooms = (p.roomLog || '').match(/[\\d.]+/g);\nif (rooms && rooms.length > 0) {\n    var sum = 0;\n    rooms.forEach(function(t) { sum += parseFloat(t); });\n    avgIndoorTemp = sum / rooms.length;\n}\n\n// Direkte Werte aus msg.sensorData (wenn verfügbar via Link-Node)\nvar sensorData = flow.get('kwl_last_sensor_data') || {};\nvar outTemp = sensorData.outdoorTemp || (avgIndoorTemp - parseFloat(bypass.deltaT || 0));\nvar absHumOut = parseFloat(absHum.out) || null;\nvar absHumIn = parseFloat(absHum.innenMin) || null;\nvar taupunktSicher = anfeuch.taupunktSicher !== false;\nvar isNight = p.isNight || false;\n\n// Temperatur-Delta\nvar deltaT = avgIndoorTemp - outTemp;\n\n// Feuchte-Check: Außen darf nicht viel feuchter sein als innen\nvar feuchteOk = true;\nif (absHumOut !== null && absHumIn !== null) {\n    feuchteOk = absHumOut <= absHumIn + 1.5;  // max 1.5 g/m³ feuchter\n}\n\n// Empfehlung berechnen\nvar empfehlung;\nvar icon;\nvar details;\n\nif (deltaT >= 3 && feuchteOk && taupunktSicher && !isNight) {\n    empfehlung = 'OFFEN';\n    icon = '🟢';\n    details = 'Fenster ganz öffnen! Außen ' + outTemp.toFixed(0) + '°C (' + deltaT.toFixed(1) + 'K kühler), Feuchte ok.';\n} else if (deltaT >= 1 && feuchteOk && taupunktSicher) {\n    empfehlung = 'KIPP';\n    icon = '🟡';\n    details = 'Kipplüftung möglich. Außen ' + outTemp.toFixed(0) + '°C (' + deltaT.toFixed(1) + 'K kühler).';\n    if (isNight) details += ' Nachts nur kippen.';\n} else if (deltaT < 0) {\n    empfehlung = 'ZU';\n    icon = '🔴';\n    details = 'Fenster zu! Außen wärmer (' + outTemp.toFixed(0) + '°C) als innen (' + avgIndoorTemp.toFixed(0) + '°C).';\n} else if (!feuchteOk) {\n    empfehlung = 'ZU';\n    icon = '🔴';\n    details = 'Fenster zu! Außenluft zu feucht (AH ' + (absHumOut || '?').toFixed(1) + ' > innen ' + (absHumIn || '?').toFixed(1) + ' g/m³).';\n} else if (!taupunktSicher) {\n    empfehlung = 'ZU';\n    icon = '🔴';\n    details = 'Fenster zu! Kondensationsgefahr (Außentemp unter Taupunkt).';\n} else {\n    empfehlung = 'KIPP';\n    icon = '🟡';\n    details = 'Kurz Kipplüften ok, aber kein Dauerlüften. Delta nur ' + deltaT.toFixed(1) + 'K.';\n}\n\n// Nur bei Statuswechsel benachrichtigen\nvar lastEmpfehlung = context.get('lastEmpfehlung') || '';\nif (empfehlung === lastEmpfehlung) return null;\ncontext.set('lastEmpfehlung', empfehlung);\n\n// Cooldown: Nicht öfter als alle 30 Min benachrichtigen\nvar lastNotify = context.get('lastNotifyTime') || 0;\nvar nowMs = Date.now();\nif (nowMs - lastNotify < 1800000) return null;  // 30 Min Cooldown\ncontext.set('lastNotifyTime', nowMs);\n\n// Push-Nachricht\nmsg.payload = {\n    title: icon + ' Lüftungsempfehlung: ' + empfehlung,\n    message: details\n};\n\nnode.status({ fill: empfehlung === 'OFFEN' ? 'green' : empfehlung === 'KIPP' ? 'yellow' : 'red',\n    shape: 'dot', text: icon + ' ' + empfehlung + ' | ' + details.substring(0, 50) });\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1465,
+        "y": 200,
+        "wires": [
+            [
+                "e6aa385280b1ae38",
+                "5cd13501e290652a"
+            ]
+        ]
+    },
+    {
+        "id": "8d7c9679b1f4fef7",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "STEUERUNG AUS",
+        "func": "// ══════════════════════════════════════════════════════════════\n// STEUERUNG AUS — Alles auf Normalwerte zurücksetzen\n// Setzt: Modus Manuell (1), Flow 150 m³/h, Bypass-Schwelle 23°C\n// Deaktiviert die Automatik bis manueller Re-Start\n// ══════════════════════════════════════════════════════════════\n\nvar HA_URL = flow.get('haUrl') || 'http://homeassistant.local:8123';\nvar HA_TOKEN = env.get('HA_TOKEN') || flow.get('haToken');\nvar MODBUS_HUB = flow.get('modbusHub') || 'Maico KWL';\n\n// Automatik deaktivieren\nflow.set('kwl_auto_disabled', true);\n\n// Normalwerte\nvar commands = [\n    { address: 550, value: 1,   desc: 'Modus → Manuell' },\n    { address: 155, value: 150, desc: 'Flow → 150 m³/h' },\n    { address: 302, value: 230, desc: 'Bypass-Schwelle → 23.0°C' },\n    { address: 552, value: 1,   desc: 'Bypass-Saison → ein' }\n];\n\n// Queue aufbauen\nflow.set('kwl_api_queue', commands.slice(1));\nflow.set('kwl_api_total', commands.length);\nflow.set('kwl_api_done', 0);\n\n// Context zurücksetzen damit nächster Auto-Start sauber ist\ncontext.set('lastMode', 1);\ncontext.set('lastFlowRate', 150);\ncontext.set('lastRoomTempMax', 230);\n\nvar first = commands[0];\nmsg.url = HA_URL + '/api/services/modbus/write_register';\nmsg.method = 'POST';\nmsg.headers = { 'Authorization': 'Bearer ' + HA_TOKEN, 'Content-Type': 'application/json' };\nmsg.payload = { hub: MODBUS_HUB, slave: 1, address: first.address, value: [first.value] };\n\nnode.warn('⏹️ KWL Steuerung AUS — Normalwerte gesetzt');\nnode.status({ fill: 'red', shape: 'ring', text: 'AUS — Manuell 150 m³/h, Bypass 23°C' });\n\n// Push-Benachrichtigung\nvar notifyMsg = {\n    payload: {\n        title: '⏹️ KWL Steuerung AUS',\n        message: 'Automatik deaktiviert. Manuell / 150 m³/h / Bypass 23°C'\n    }\n};\n\nreturn [msg, notifyMsg];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 445,
+        "y": 650,
+        "wires": [
+            [
+                "791405ee93765abf"
+            ],
+            [
+                "e6aa385280b1ae38"
+            ]
+        ]
+    },
+    {
+        "id": "63f5ed380573e570",
+        "type": "inject",
+        "z": "0593f98386cdf30b",
+        "name": "STEUERUNG AUS",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 165,
+        "y": 650,
+        "wires": [
+            [
+                "8d7c9679b1f4fef7"
+            ]
+        ]
+    },
+    {
+        "id": "c7037888114d2b7c",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "Step 2b: HA Logbook",
+        "func": "var p = msg.payload || {};\nvar HA_URL = flow.get('haUrl');\nvar HA_TOKEN = env.get('HA_TOKEN') || flow.get('haToken');\n\nvar isManualTrigger = (msg.topic === 'click' || msg.topic === 'trigger' || p.forced === true);\n//var forceLog = (p.bypass && p.bypass.effektiv === false && p.bypass.wanted === true);\n\nfunction f(val, n) {\n    var num = parseFloat(val);\n   return isNaN(num) ? '?' : num.toFixed(n !== undefined ? n : 1);\n}\n\nvar regLabels = {\n    550: 'Mode',\n    552: 'Bypass-Saison',\n    302: 'Bypass-Temp',\n    155: 'Volumenstrom',\n    154: 'Flow-Red',\n    156: 'Flow-Int',\n    554: 'Stufe'\n};\nvar modeLabels = { 0: 'Aus', 1: 'Manuell', 2: 'AutoZeit', 3: 'AutoSensor', 4: 'Eco-Zu', 5: 'Eco-Ab' };\n\nvar actions = [];\n(p.commands || []).forEach(function (cmd) {\n    var label = regLabels[cmd.register] || ('Reg' + cmd.register);\n    var val = cmd.value;\n    if (cmd.register === 550) val = (modeLabels[cmd.value] || cmd.value);\n    if (cmd.register === 552) val = (cmd.value === 1 ? 'ein' : 'aus');\n    if (cmd.register === 302) val = (cmd.value / 10).toFixed(1) + '°C';\n    if (cmd.register === 155 || cmd.register === 154 || cmd.register === 156) val = cmd.value + 'm³/h';\n    actions.push(label + '→' + val);\n});\nvar actionText = actions.length > 0 ? actions.join(', ') : 'keine';\n\n// ── Sollwert-Bildung berechnen ──\nvar flowReasonsArray = (p.flowRate && p.flowRate.reasons) || [];\nvar finalFlow = parseInt(p.flowRate && p.flowRate.new) || 100;\nvar ahCap = parseInt(p.flowRate && p.flowRate.ahCap) || 999; \nvar flowCalculationText = '';\n\nif (flowReasonsArray.length > 0) {\n    var rawSum = 100;\n    flowReasonsArray.forEach(function(reasonStr) {\n        var match = reasonStr.match(/[+-]\\s*(\\d+)/);\n        if (match) {\n            var val = parseInt(match[1]);\n            if (reasonStr.indexOf('-') !== -1) rawSum -= val;\n            else rawSum += val;\n        }\n    });\n    if (rawSum > ahCap) {\n        flowReasonsArray.push('Cap-Bremse: -' + (rawSum - ahCap));\n    }\n    flowCalculationText = '100 → [' + flowReasonsArray.join(' | ') + '] → ' + finalFlow + ' m³/h';\n} else {\n    flowCalculationText = finalFlow + ' m³/h (Standard)';\n}\n\nvar absHum = p.absHum || {};\nvar bypass = p.bypass || {};\nvar anfeuch = absHum.anfeuchtung || {};\n\n// ── OPTIMIERUNG: Kompakter Feuchte-Text ──\nvar anfeuchtStatus = 'ok';\nif (anfeuch.notfall) anfeuchtStatus = 'NOTFALL 🚨';\nelse if (anfeuch.kritisch) anfeuchtStatus = 'kritisch ⚠️';\nelse if (anfeuch.nochNoetig) anfeuchtStatus = 'aktiv 🔄';\n\nvar humidityText = anfeuchtStatus + ' (W: ' + f(absHum.in, 1) + ' | K: ' + f(absHum.kinder, 1) + ' | A: ' + f(absHum.out, 1) + ' g/m³)';\n\n// ── Fenster-Logik ──\nvar sensorData = flow.get('kwl_last_sensor_data') || {};\nvar outTemp = sensorData.outdoorTemp || 0;\nvar avgIndoorTemp = 0;\nvar roomCount = 0;\n(sensorData.rooms || []).forEach(function (r) { avgIndoorTemp += r.temp; roomCount++; });\nif (roomCount > 0) avgIndoorTemp = avgIndoorTemp / roomCount;\n\nvar absHumOut = parseFloat(absHum.out) || null;\nvar absHumIn = parseFloat(absHum.innenMin) || null;\nvar taupunktSicher = anfeuch.taupunktSicher !== false;\nvar isNight = p.isNight || false;\nvar deltaT = avgIndoorTemp - outTemp;\nvar feuchteOk = (absHumOut !== null && absHumIn !== null) ? (absHumOut <= absHumIn + 1.5) : true;\n\nvar fensterIcon = '🟡';\nvar fensterText = 'Kipp ok (' + deltaT.toFixed(0) + 'K)';\nif (deltaT >= 3 && feuchteOk && taupunktSicher && !isNight) {\n    fensterIcon = '🟢'; fensterText = 'Öffnen ok (' + deltaT.toFixed(0) + 'K kühler)';\n} else if (deltaT < 0 || !feuchteOk || !taupunktSicher) {\n    fensterIcon = '🔴';\n    fensterText = !feuchteOk ? 'Zu lassen! (außen feucht)' : (!taupunktSicher ? 'Zu lassen! (Kondensation)' : 'Zu lassen! (außen wärmer)');\n}\n\nvar bypassEffektivText = '-';\nif (bypass.wanted && bypass.effektiv === true) bypassEffektivText = 'JA';\nelse if (bypass.wanted && bypass.effektiv === false) bypassEffektivText = 'NEIN!';\n\n// ── Das neue, vollständige Log-Design ──\nvar cleanLogMessage = [\n    '💨 SOLLWERT: ' + flowCalculationText,\n    '🕹️ LOGIK: ' + (p.mode && p.mode.name || '?') + ' (' + (p.mode && p.mode.reason || '?') + ')',\n    '💧 FEUCHTE: ' + humidityText,\n    '⚡ AKTION: ' + actionText,\n    '🪟 FENSTER: ' + fensterIcon + ' ' + fensterText,\n    '🔄 BYPASS: ' + (bypass.wanted ? 'OFFEN' : 'ZU') + ' (Effektiv: ' + bypassEffektivText + ')'\n].join('   ❘   ');\n\nmsg.url = HA_URL + '/api/services/logbook/log';\nmsg.method = 'POST';\nmsg.headers = { 'Authorization': 'Bearer ' + HA_TOKEN, 'Content-Type': 'application/json' };\n\nmsg.payload = {\n    name: 'KWL Steuerung',\n    message: cleanLogMessage, \n    entity_id: 'sensor.maico_betriebsart',\n    domain: 'kwl'\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1380,
+        "y": 75,
+        "wires": [
+            [
+                "871281e1a0cd6553"
+            ]
+        ]
+    },
+    {
+        "id": "88b96626b4216bf0",
+        "type": "function",
+        "z": "0593f98386cdf30b",
+        "name": "STEP 1c: Register 707 — Raumtemperatur",
+        "func": "// ══════════════════════════════════════════════════════════════\n// STEP 1c: Register 707 — Raumtemperatur an Maico melden\n// Schreibt die HÖCHSTE Raumtemperatur auf Reg.707\n// Maico-Vorgabe: Schreibzyklus min. 10 Minuten!\n// Ersetzt die HA-Automation \"WS300 Modbus Sync2\"\n//\n// Maico-interne Bypass-Logik:\n//   Bypass öffnet wenn Reg.707 > Reg.302\n//   → Deshalb immer den wärmsten Raum melden\n//\n// Verkabelung: Step 1 (Sensordaten) → Step 1c → eigener HTTP Request Node\n// ══════════════════════════════════════════════════════════════\n\nvar d = msg.payload || {};\nvar rooms = d.rooms || [];\n\nif (rooms.length === 0) return null;\n\n// ── 5-Minuten-Sperre (Maico Modbus Doku: Schreibzyklus min. 10min) ──\nvar MIN_WRITE_INTERVAL = 300000; // 5 Minuten in ms\nvar lastWriteTime = context.get('lastReg707Time') || 0;\nvar nowMs = Date.now();\n\nif (nowMs - lastWriteTime < MIN_WRITE_INTERVAL) {\n    node.status({\n        fill: 'grey', shape: 'ring',\n        text: 'Warte... ' + Math.round((MIN_WRITE_INTERVAL - (nowMs - lastWriteTime)) / 60000) + ' min bis nächster Schreibzyklus'\n    });\n    return null;\n}\n\n// ── Höchste Raumtemperatur ermitteln ──\nvar maxRoomTemp = Math.max.apply(null, rooms.map(function (r) { return r.temp; }));\nvar maxRoomName = '';\nrooms.forEach(function (r) { if (r.temp === maxRoomTemp) maxRoomName = r.name; });\n\nvar reg707Value = Math.round(maxRoomTemp * 10);\n\n// ── Plausibilitätsprüfung (Maico akzeptiert -300 bis 1200 = -30°C bis 120°C) ──\nif (reg707Value < -300 || reg707Value > 1200) {\n    node.warn('Reg.707 außerhalb Bereich: ' + reg707Value + ' (' + maxRoomTemp.toFixed(1) + '°C)');\n    return null;\n}\n\n// ── Hysterese: Nur senden wenn Änderung > ±0.5°C ──\nvar lastSent = context.get('lastReg707') || 0;\nif (Math.abs(reg707Value - lastSent) < 5) {\n    node.status({\n        fill: 'green', shape: 'ring',\n        text: maxRoomName + ': ' + maxRoomTemp.toFixed(1) + '°C (unverändert)'\n    });\n    return null;\n}\n\n// ── Rücklese-Validierung (optional: prüft ob letzter Wert angekommen ist) ──\nvar states = global.get('homeassistant.homeAssistant.states') || {};\nvar readback = states['sensor.maico_t_raum_bus'];\nvar readbackValue = readback ? Math.round(parseFloat(readback.state) * 10) : null;\n\nif (readbackValue !== null && lastSent !== 0 && Math.abs(readbackValue - lastSent) > 5) {\n    node.warn('⚠️ Reg.707 Mismatch: geschrieben ' + lastSent + ' (' + (lastSent / 10).toFixed(1) + '°C), gelesen ' + readbackValue + ' (' + (readbackValue / 10).toFixed(1) + '°C)');\n}\n\n// ── Schreiben ──\ncontext.set('lastReg707', reg707Value);\ncontext.set('lastReg707Time', nowMs);\n\nvar HA_URL = flow.get('haUrl') || 'http://homeassistant.local:8123';\nvar HA_TOKEN = env.get('HA_TOKEN') || flow.get('haToken');\nvar MODBUS_HUB = flow.get('modbusHub') || 'Maico KWL';\n\nmsg.url = HA_URL + '/api/services/modbus/write_register';\nmsg.method = 'POST';\nmsg.headers = { 'Authorization': 'Bearer ' + HA_TOKEN, 'Content-Type': 'application/json' };\nmsg.payload = { hub: MODBUS_HUB, slave: 1, address: 707, value: [reg707Value] };\n\nnode.status({\n    fill: 'green', shape: 'dot',\n    text: maxRoomName + ': ' + maxRoomTemp.toFixed(1) + '°C → Reg.707=' + reg707Value + ' (' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ')'\n});\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 795,
+        "y": 350,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c1a077a740d0bcf2",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": "at: ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "h23",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": true
+    },
+    {
+        "id": "3156a58ac442344f",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]
